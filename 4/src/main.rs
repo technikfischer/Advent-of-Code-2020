@@ -28,7 +28,7 @@ impl PassportReader {
     }
 }
 
-impl<'a> Iterator for PassportReader {
+impl Iterator for PassportReader {
     type Item = Passport;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -99,6 +99,7 @@ fn main() {
     let passport_reader = PassportReader::new(BufReader::new(File::open("input").unwrap()));
     let passports: Vec<Passport> = passport_reader.collect();
 
+    // part 1
     let mut valid = 0;
     for passport in passports.iter() {
         if let Passport { byr: Some(_), cid: _, ecl: Some(_), eyr: Some(_), hcl: Some(_), iyr: Some(_), pid: Some(_), hgt: Some(_) } = passport {
@@ -108,6 +109,7 @@ fn main() {
 
     println!("Valid passports {}", valid);
 
+    // part 2
     let hair_color_regex = Regex::new(r"^#[0-9a-f]{6}$").unwrap();
     let height_regex = Regex::new(r"^(?P<value>\d+)(?P<unit>cm|in)$").unwrap();
     let eye_color_regex = Regex::new("^(amb|blu|brn|gry|grn|hzl|oth)$").unwrap();
@@ -120,25 +122,20 @@ fn main() {
             if in_bounds(1920, byr, 2002)
                 && in_bounds(2010, iyr, 2020)
                 && in_bounds(2020, eyr, 2030)
+                && eye_color_regex.is_match(ecl.as_ref())
+                && passport_id_regex.is_match(pid.as_ref())
+                && hair_color_regex.is_match(hcl.as_ref())
             => {
+                // check height
                 if let Some(group) = height_regex.captures(hgt.as_ref()) {
                     match (group.name("value").map(|m| m.as_str().parse()), group.name("unit").map(|m| m.as_str())) {
                         (Some(Ok(height)), Some("cm")) if in_bounds(150, height, 193) => {}
                         (Some(Ok(height)), Some("in")) if in_bounds(59, height, 76) => {}
-                        _ => { println!("Invalid {}", hgt); continue; }
+                        _ => { continue; }
                     }
                 } else {
                     continue;
                 }
-
-
-                if !hair_color_regex.is_match(hcl.as_ref()) { continue; }
-
-                if !eye_color_regex.is_match(ecl.as_ref()) { continue; }
-
-                if !passport_id_regex.is_match(pid.as_ref()) { continue; }
-
-                if pid.len() != 9 || pid.parse::<usize>().is_err() { continue; }
 
                 valid += 1;
             }
