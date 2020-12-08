@@ -19,7 +19,7 @@ fn main() {
 
     for seat_id in 1..*highest_seat_id {
         if seat_ids.contains(&(seat_id - 1)) && !seat_ids.contains(&seat_id) && seat_ids.contains(&(seat_id + 1)) {
-            printls!("Empty seat surounded with used seats: {}", seat_id);
+            println!("Empty seat surounded with used seats: {}", seat_id);
         }
     }
 }
