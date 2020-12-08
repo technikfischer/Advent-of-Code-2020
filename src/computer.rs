@@ -14,8 +14,13 @@ impl ProgramState {
             acc: 0,
         }
     }
+
+    pub fn terminated(&self, program: &Program) -> bool {
+        self.pc >= program.len()
+    }
 }
 
+#[derive(Copy, Clone)]
 pub enum Instruction {
     Acc(isize),
     Nop(isize),
