@@ -20,21 +20,32 @@ fn main() {
     {
         if !valid_number_slice(&numbers[window_start..window_start + 26]) {
             invalid_number = numbers[window_start + 25];
-            println!("Pos 26 of invalid slice {}", invalid_number);
+            println!("Pos 26 of invalid slice {} @ {}", invalid_number, window_start);
             break;
         }
     }
 
     // part 2
-    'outer: for start in 0..numbers.len() {
-        for end in (start + 1)..numbers.len() {
-            let sum: u64 = numbers[start..=end].iter().sum();
-            if sum == invalid_number {
-                let min = numbers[start..end].iter().min().unwrap();
-                let max = numbers[start..end].iter().max().unwrap();
-                println!("Found weakness to be {}, length {}", min + max, end - start + 1);
-                break 'outer;
-            }
+    let mut left = 0;
+    let mut right = 1;
+    let mut sum = numbers[0];
+
+    loop {
+        while sum < invalid_number /*&& right < numbers.len()*/ {
+            sum += numbers[right];
+            right += 1;
+        }
+
+        while sum > invalid_number /*&& left < numbers.len()*/ {
+            sum -= numbers[left];
+            left += 1;
+        }
+
+        if sum == invalid_number {
+            let min = numbers[left..=right].iter().min().unwrap();
+            let max = numbers[left..=right].iter().max().unwrap();
+            println!("Found weakness to be {}, length {}, {} -> {}", min + max, right - left + 1, left, right);
+            break;
         }
     }
 }
