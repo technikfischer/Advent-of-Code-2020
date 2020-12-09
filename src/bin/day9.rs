@@ -10,21 +10,31 @@ fn valid_number_slice(slice: &[u64]) -> bool {
 
 fn main() {
     let lines = fs::read_to_string("input").expect("Could not open input file");
-    let mut numbers = lines.lines()
-        .map(|line| line.parse::<u64>().expect("Cannot parse integer"));
+    let numbers = lines.lines()
+        .map(|line| line.parse::<u64>().expect("Cannot parse integer"))
+        .collect_vec();
 
     // part 1
-    let mut v: Vec<u64> = Vec::new();
-    for i in 0..25 {
-        v.push(numbers.next().expect("Not enough numbers in vector"))
+    let mut invalid_number = 0;
+    for window_start in 0..(numbers.len() - 25)
+    {
+        if !valid_number_slice(&numbers[window_start..window_start + 26]) {
+            invalid_number = numbers[window_start + 25];
+            println!("Pos 26 of invalid slice {}", invalid_number);
+            break;
+        }
     }
 
-    while let Some(e) = numbers.next()
-    {
-        v.push(e);
-        if !valid_number_slice(&v[..]) {
-            println!("Pos 26 of invalid slice {}", v[25])
+    // part 2
+    'outer: for start in 0..numbers.len() {
+        for end in (start + 1)..numbers.len() {
+            let sum: u64 = numbers[start..=end].iter().sum();
+            if sum == invalid_number {
+                let min = numbers[start..end].iter().min().unwrap();
+                let max = numbers[start..end].iter().max().unwrap();
+                println!("Found weakness to be {}, length {}", min + max, end - start + 1);
+                break 'outer;
+            }
         }
-        v.remove(0);
     }
 }
