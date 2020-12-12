@@ -78,12 +78,12 @@ fn main() {
     let start_pos = ShipPosition { ns: 0, ew: 0, facing: 1 };
     let end_position = instructions.iter().fold(start_pos, |pos, nav| apply_instruction(nav, &pos));
     let manhatten_distance = end_position.ns.abs() + end_position.ew.abs();
-    println!("Manhatten distance from start is {}", manhatten_distance);
+    println!("(Part 1) Manhattan distance from start is {}", manhatten_distance);
 
     //part 2
     let ship_pos = ShipPosition { ns: 0, ew: 0, facing: 1 };
     let waypoint_pos = WaypointPosition { ns: 1, ew: 10 };
     let (end_position, _) = instructions.iter().fold((ship_pos, waypoint_pos), apply_waypoint_instruction);
     let manhatten_distance = end_position.ns.abs() + end_position.ew.abs();
-    println!("Manhatten distance from start is {}", manhatten_distance);
+    println!("(Part 2) Manhattan distance from start is {}", manhatten_distance);
 }
