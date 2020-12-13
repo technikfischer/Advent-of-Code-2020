@@ -7,6 +7,7 @@ dependencies = [
  "counter",
  "itertools",
  "lazy_static",
+ "modinverse",
  "reduce",
  "regex",
 ]
@@ -61,6 +62,25 @@ name = "memchr"
 version = "2.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ee1c47aaa256ecabcaea351eae4a9b01ef39ed810004e298d2511ed284b1525"
+
+[[package]]
+name = "modinverse"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f62f577f148cc1a9466e7065a22e59466a7d537cceba5e77e57181d0f706633"
+dependencies = [
+ "num-integer",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2cc698a63b549a70bc047073d2949cce27cd1c7b0a4a862d08a8031bc2801db"
+dependencies = [
+ "autocfg",
+ "num-traits",
+]
 
 [[package]]
 name = "num-traits"
