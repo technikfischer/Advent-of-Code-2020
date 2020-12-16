@@ -23,13 +23,14 @@ fn space<'a>() -> Parser<'a, u8, ()> {
 }
 
 fn range<'a>() -> Parser<'a, u8, Range<u32>> {
-    (integer() - space() - sym(b'-') - space() + integer()).map(|(start, end)| start..end + 1)
+    (integer() - sym(b'-') + integer()).map(|(start, end)| start..end + 1)
 }
 
 fn rule<'a>() -> Parser<'a, u8, (String, [Range<u32>; 2])> {
     let rule_name = (is_a(alpha) | is_a(pom::char_class::space)).repeat(1..).convert(String::from_utf8);
-    let ranges = range() - space() - seq(b"or") - space() + range();
-    let rule = rule_name - space() - sym(b':') - space() + ranges;
+    let ranges = range() - seq(b" or ") + range();
+
+    let rule = rule_name - sym(b':') - space() + ranges;
     rule.map(|(name, (range0, range1))| (name, [range0, range1]))
 }
 
@@ -40,9 +41,9 @@ fn ticket<'a>() -> Parser<'a, u8, Ticket> {
 fn input<'a>() -> Parser<'a, u8, Input> {
     let rules = list(rule(), space());
     let my_ticket = seq(b"your ticket:") * space() * ticket();
-    let nearby_tickets = seq(b"nearby ticket:\n") * list(ticket(), space());
+    let nearby_tickets = seq(b"nearby tickets:\n") * list(ticket(), space());
 
-    let input = rules + my_ticket + nearby_tickets;
+    let input = rules - space().opt() + my_ticket - space().opt() + nearby_tickets - space().opt() - end();
 
     input.map(|((rules, my_ticket), nearby_tickets)| Input {
         rules: rules.into_iter().collect(),
