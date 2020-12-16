@@ -1,6 +1,5 @@
 use std::fs;
-use std::collections::{HashMap};
-use std::ops::Range;
+use std::collections::{HashMap, HashSet};
 use pom::parser::*;
 use pom::char_class::{multispace, alpha};
 
@@ -9,7 +8,7 @@ type Ticket = Vec<u32>;
 
 #[derive(Debug)]
 struct Input {
-    rules: HashMap<String, [Range<u32>; 2]>,
+    rules: HashMap<String, [(u32, u32); 2]>,
     my_ticket: Ticket,
     nearby_tickets: Vec<Ticket>,
 }
@@ -22,11 +21,11 @@ fn space<'a>() -> Parser<'a, u8, ()> {
     is_a(multispace).repeat(1..).discard()
 }
 
-fn range<'a>() -> Parser<'a, u8, Range<u32>> {
-    (integer() - sym(b'-') + integer()).map(|(start, end)| start..end + 1)
+fn range<'a>() -> Parser<'a, u8, (u32, u32)> {
+    integer() - sym(b'-') + integer()
 }
 
-fn rule<'a>() -> Parser<'a, u8, (String, [Range<u32>; 2])> {
+fn rule<'a>() -> Parser<'a, u8, (String, [(u32, u32); 2])> {
     let rule_name = (is_a(alpha) | is_a(pom::char_class::space)).repeat(1..).convert(String::from_utf8);
     let ranges = range() - seq(b" or ") + range();
 
@@ -54,6 +53,23 @@ fn input<'a>() -> Parser<'a, u8, Input> {
 
 fn main() {
     let file = fs::read_to_string("input").expect("Could not open file");
-    let input = input().parse(file.as_bytes());
-    println!("{:?}", input);
+    let input = input().parse(file.as_bytes()).unwrap();
+
+    // part 1
+    let mut valid_numbers = HashSet::new();
+    for (_, &ranges) in input.rules.iter() {
+        for range in 0..ranges.len() {
+            for number in ranges[range].0..=ranges[range].1 {
+                valid_numbers.insert(number);
+            }
+        }
+    }
+
+    let error_rate : u32 = input.nearby_tickets.iter()
+        .flat_map(|ticket| ticket.iter())
+        .filter(|number| !valid_numbers.contains(number))
+        .copied()
+        .sum();
+
+    println!("Ticket Scanning Error Rate is {}", error_rate);
 }
