@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fs;
 
-type State = HashSet<(i32, i32, i32)>;
+type State = HashSet<(i32, i32, i32, i32)>;
 
 fn get_initial_state() -> State {
     let input = fs::read_to_string("input").expect("Could not read file");
@@ -10,7 +10,7 @@ fn get_initial_state() -> State {
     for (x, line) in input.lines().enumerate() {
         for (y, c) in line.chars().enumerate() {
             if c == '#' {
-                state.insert((x as i32, y as i32, 0));
+                state.insert((x as i32, y as i32, 0, 0));
             }
         }
     }
@@ -18,14 +18,16 @@ fn get_initial_state() -> State {
     state
 }
 
-fn find_candidates_for_changing(state: &State) -> HashSet<(i32, i32, i32)> {
+fn find_candidates_for_changing(state: &State) -> HashSet<(i32, i32, i32, i32)> {
     let mut candidates_for_changing = HashSet::new();
 
-    for (x, y, z) in state { // for each active state, all cubes inside the 3x3x3 cube around can change
+    for (x, y, z, w) in state { // for each active state, all cubes inside the 3x3x3 cube around can change
         for x in x - 1..=x + 1 {
             for y in y - 1..=y + 1 {
                 for z in z - 1..=z + 1 {
-                    candidates_for_changing.insert((x, y, z));
+                    for w in w - 1..=w + 1 {
+                        candidates_for_changing.insert((x, y, z, w));
+                    }
                 }
             }
         }
@@ -34,16 +36,18 @@ fn find_candidates_for_changing(state: &State) -> HashSet<(i32, i32, i32)> {
     candidates_for_changing
 }
 
-fn count_neighbours(state: &State, (x, y, z): (i32, i32, i32)) -> u32 {
+fn count_neighbours(state: &State, (x, y, z, w): (i32, i32, i32, i32)) -> u32 {
     let mut count = 0;
     for xi in x - 1..=x + 1 {
         for yi in y - 1..=y + 1 {
             for zi in z - 1..=z + 1 {
-                if xi == x && yi == y && zi == z {
-                    continue;
-                }
-                if state.contains(&(xi, yi, zi)) {
-                    count += 1;
+                for wi in w - 1..=w + 1 {
+                    if xi == x && yi == y && zi == z && wi == w {
+                        continue;
+                    }
+                    if state.contains(&(xi, yi, zi, wi)) {
+                        count += 1;
+                    }
                 }
             }
         }
