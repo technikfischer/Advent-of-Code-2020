@@ -1,5 +1,6 @@
 use std::fs;
 use itertools::Itertools;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 enum Rule<'a> {
@@ -13,11 +14,11 @@ fn parse_sequence<'a>(sequence: &str) -> Rule<'a> {
     Rule::Sequence(rules)
 }
 
-fn parse_rule(rule: &str) -> Rule {
-    // split of number and :<space>
-    let rule = &rule.trim_start_matches(char::is_numeric)[2..];
+fn parse_rule(rule: &str) -> (usize, Rule) {
+    let (id, rule): (&str, &str) = rule.split(": ").collect_tuple().unwrap();
+    let id = id.parse::<usize>().unwrap();
 
-    if let Some((left, right)) = rule.split('|').collect_tuple() {
+    (id, if let Some((left, right)) = rule.split('|').collect_tuple() {
         // alternation
         let left = parse_sequence(left);
         let right = parse_sequence(right);
@@ -29,44 +30,51 @@ fn parse_rule(rule: &str) -> Rule {
     } else {
         // normal sequence
         parse_sequence(rule)
-    }
+    })
 }
 
-fn does_match<'a>(string: &'a str, pattern: &Rule, rules: &Vec<Rule>) -> (bool, &'a str) {
+fn does_match<'a>(string: &'a str, pattern: &Rule, rules: &HashMap<usize, Rule>) -> HashSet<&'a str> {
+    if string.len() == 0 {
+        return HashSet::new();
+    }
     match pattern {
-        Rule::String(p) => (string.starts_with(p), &string[p.len()..]),
+        Rule::String(p) => if string.starts_with(p) { vec![&string[p.len()..]].into_iter().collect() } else { HashSet::new() },
         Rule::Sequence(seq) => {
-            let mut string = string;
-            for rule in seq.iter().map(|&id| &rules[id]) {
-                let (matches, rest) = does_match(string, rule, rules);
-                if matches {
-                    string = rest;
-                } else {
-                    return (false, string);
+            let mut possibilites = vec![string].into_iter().collect();
+            for rule in seq.iter().map(|id| &rules[id]) {
+                let mut generated = HashSet::new();
+                for p in possibilites {
+                    generated.extend(does_match(p, rule, rules));
                 }
+                possibilites = generated
             }
-            (true, string)
+            possibilites
         }
         Rule::Alternation(left, right) => {
-            let (left_match, rest) = does_match(string, left, rules);
-            if left_match {
-                return (true, rest);
-            }
-            does_match(string, right, rules)
+            let mut left = does_match(string, left, rules);
+            let right = does_match(string, right, rules);
+            left.extend(right);
+            left
         }
     }
 }
 
 fn main() {
     let rules = fs::read_to_string("rules").expect("Could not open file");
-    let rules = rules.lines().sorted_by_key(|e| e.split(':').nth(0).map(|s| s.parse::<u32>().unwrap())).map(parse_rule).collect _vec();
+    let mut rules = rules.lines().map(parse_rule).collect::<HashMap<_, _>>();
+
+    // replace rules
+    rules.insert(8, Rule::Alternation(Box::new(Rule::Sequence(vec![42])), Box::new(Rule::Sequence(vec![42, 8]))));
+    rules.insert(11, Rule::Alternation(Box::new(Rule::Sequence(vec![42, 31])), Box::new(Rule::Sequence(vec![42, 11, 31]))));
 
     let input = fs::read_to_string("input").expect("Could not open file");
     let input = input.lines().collect_vec();
 
     let mut amount = 0;
     for i in input {
-        if let (true, "") = does_match(i, &rules[0], &rules) {
+        println!("{}", i);
+        let matches = does_match(i, &rules[&0], &rules);
+        if matches.iter().any(|s| s.len() == 0) {
             amount += 1;
         }
     }
