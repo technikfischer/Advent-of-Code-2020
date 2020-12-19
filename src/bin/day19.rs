@@ -1,6 +1,6 @@
 use std::fs;
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 enum Rule<'a> {
@@ -33,30 +33,28 @@ fn parse_rule(rule: &str) -> (usize, Rule) {
     })
 }
 
-fn does_match<'a>(string: &'a str, pattern: &Rule, rules: &HashMap<usize, Rule>, must_consume: bool) -> (bool, &'a str) {
+fn does_match<'a>(string: &'a str, pattern: &Rule, rules: &HashMap<usize, Rule>) -> HashSet<&'a str> {
     if string.len() == 0 {
-        return (false, string);
+        return HashSet::new();
     }
     match pattern {
-        Rule::String(p) => (string.starts_with(p) && (!must_consume || p.len() == string.len()), &string[p.len()..]),
+        Rule::String(p) => if string.starts_with(p) { vec![&string[p.len()..]].into_iter().collect() } else { HashSet::new() },
         Rule::Sequence(seq) => {
-            let mut string = string;
-            for (idx, rule) in seq.iter().map(|id| &rules[id]).enumerate() {
-                let (matches, rest) = does_match(string, rule, rules, must_consume && (idx == seq.len() - 1));
-                if matches {
-                    string = rest;
-                } else {
-                    return (false, string);
+            let mut possibilites = vec![string].into_iter().collect();
+            for rule in seq.iter().map(|id| &rules[id]) {
+                let mut generated = HashSet::new();
+                for p in possibilites {
+                    generated.extend(does_match(p, rule, rules));
                 }
+                possibilites = generated
             }
-            (true, string)
+            possibilites
         }
         Rule::Alternation(left, right) => {
-            let (left_match, rest) = does_match(string, left, rules, true);
-            if left_match {
-                return (true, rest);
-            }
-            does_match(string, right, rules, true)
+            let mut left = does_match(string, left, rules);
+            let right = does_match(string, right, rules);
+            left.extend(right);
+            left
         }
     }
 }
@@ -74,7 +72,9 @@ fn main() {
 
     let mut amount = 0;
     for i in input {
-        if let (true, "") = does_match(i, &rules[&0], &rules, true) {
+        println!("{}", i);
+        let matches = does_match(i, &rules[&0], &rules);
+        if matches.iter().any(|s| s.len() == 0) {
             amount += 1;
         }
     }
