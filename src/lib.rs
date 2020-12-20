@@ -11,3 +11,5 @@ pub fn get_input<F: FromStr>() -> Vec<F>
         .map(|line| line.parse::<F>().expect("Could not parse input element"))
         .collect::<Vec<F>>()
 }
+
+pub mod bitvector;
