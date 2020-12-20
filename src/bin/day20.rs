@@ -3,7 +3,7 @@ use std::str::FromStr;
 use itertools::Itertools;
 use advent_of_code::bitvector::BitVector;
 
-const WIDTH: i32 = 10;
+const WIDTH: usize = 10;
 const GRID_SIZE: usize = 12;
 
 type Orientation = (bool, bool, bool);
@@ -19,30 +19,40 @@ const ORIENTS: [Orientation; 8] = [
     (true, true, true)
 ];
 
+#[derive(Clone)]
 struct Image {
     id: u32,
-    data: Vec<bool>,
-    orientation: Orientation,
+    pub data: Vec<bool>,
+    side: usize,
 }
 
 impl Image {
-    fn new(id: u32, data: Vec<bool>) -> Self {
+    fn new(id: u32, data: Vec<bool>, side: usize) -> Self {
         Self {
             id,
             data,
-            orientation: (false, false, false),
+            side,
         }
     }
 
-    fn get(&self, index: (i32, i32), (fx, fy, swap): &Orientation) -> bool {
+    fn get(&self, index: (usize, usize), (fx, fy, swap): &Orientation) -> bool {
+        *self.data.get(self.idx(index, fx, fy, swap)).unwrap_or_else(|| &false)
+    }
+
+    fn idx(&self, index: (usize, usize), fx: &bool, fy: &bool, swap: &bool) -> usize {
         let (mut x, mut y) = if *swap {
             (index.1, index.0)
         } else {
             index
         };
-        if *fx { x = WIDTH - 1 - x; }
-        if *fy { y = WIDTH - 1 - y; }
-        *self.data.get((y * WIDTH + x) as usize).unwrap()
+        if *fx { x = self.side - 1 - x; }
+        if *fy { y = self.side - 1 - y; }
+        y * self.side + x
+    }
+
+    fn set(&mut self, index: (usize, usize), (fx, fy, swap): &Orientation, val: bool) {
+        let idx = self.idx(index, fx, fy, swap);
+        self.data[idx] = val;
     }
 }
 
@@ -54,7 +64,7 @@ impl FromStr for Image {
         let id = lines.next().unwrap();
         let id = id[5..9].parse().expect("Could not parse tile number");
         let data = lines.join("").chars().map(|c| c == '#').collect();
-        Ok(Image::new(id, data))
+        Ok(Image::new(id, data, WIDTH as usize))
     }
 }
 
@@ -80,8 +90,8 @@ fn find_solution<'a>(images: &'a Vec<Image>, used: BitVector, placed: &mut Vec<(
                 let left = placed[index - 1];
                 if (0..WIDTH)
                     .map(|i| (
-                        image.get((i, 0), orientation),
-                        left.0.get((i, WIDTH - 1), &left.1)
+                        image.get((i as usize, 0), orientation),
+                        left.0.get((i as usize, (WIDTH - 1) as usize), &left.1)
                     ))
                     .any(|(a, b)| a != b) {
                     continue;
@@ -93,8 +103,8 @@ fn find_solution<'a>(images: &'a Vec<Image>, used: BitVector, placed: &mut Vec<(
                 let up = placed[index - GRID_SIZE]; // ultra hack
                 if (0..WIDTH)
                     .map(|i| (
-                        image.get((0, i), orientation),
-                        up.0.get((WIDTH - 1, i), &up.1)
+                        image.get((0, i as usize), orientation),
+                        up.0.get(((WIDTH - 1) as usize, i as usize), &up.1)
                     ))
                     .any(|(a, b)| a != b) {
                     continue;
@@ -113,6 +123,27 @@ fn find_solution<'a>(images: &'a Vec<Image>, used: BitVector, placed: &mut Vec<(
     false
 }
 
+fn is_monster(monster: &[[bool; 20]; 3], image: &Image, orient: &Orientation, row: usize, col: usize) -> bool {
+    for c in 0..20 {
+        for r in 0..3 {
+            if !image.get((r + row, c + col), orient) && monster[r][c] {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+fn mark_monster(monster: &[[bool; 20]; 3], monster_parts: &mut Image, orient: &Orientation, row: usize, col: usize) {
+    for c in 0..20 {
+        for r in 0..3 {
+            if monster[r][c] {
+                monster_parts.set((r + row, c + col), orient, false);
+            }
+        }
+    }
+}
+
 fn main() {
     let input = fs::read_to_string("input").unwrap();
     let images = input.split("\n\n").map(|s| s.parse::<Image>().unwrap()).collect_vec();
@@ -121,6 +152,53 @@ fn main() {
     find_solution(&images, BitVector::new(), &mut placed);
 
     const CORNERS: [usize; 4] = [0, GRID_SIZE - 1, GRID_SIZE * (GRID_SIZE - 1), GRID_SIZE * GRID_SIZE - 1];
-    let product : u64 = CORNERS.iter().map(|i| placed[*i].0.id as u64).product();
+    let product: u64 = CORNERS.iter().map(|i| placed[*i].0.id as u64).product();
     println!("Product of corners is {}", product);
+
+    const T: bool = true;
+    const F: bool = false;
+    let monster = [
+        [F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, T, F],
+        [T, F, F, F, F, T, T, F, F, F, F, T, T, F, F, F, F, T, T, T],
+        [F, T, F, F, T, F, F, T, F, F, T, F, F, T, F, F, T, F, F, F]
+    ];
+
+    let mut image_data = Vec::new();
+    image_data.reserve(12 * 10 - 10 * 2);
+
+    for image_row in 0..GRID_SIZE {
+        for single_row in 1..9 {
+            for image_col in 0..GRID_SIZE {
+                for single_col in 1..9 {
+                    let tile = placed[image_row + GRID_SIZE * image_col];
+                    image_data.push(tile.0.get((single_col, single_row), &tile.1));
+                }
+            }
+        }
+    }
+
+    const SIDE: usize = GRID_SIZE * WIDTH - GRID_SIZE * 2;
+    assert_eq!(image_data.len(), SIDE * SIDE);
+    let image = Image::new(0, image_data, SIDE);
+
+    for orientation in ORIENTS.iter() {
+        let mut monsters = 0;
+        let mut part_of_monster = image.clone();
+
+        // swapped to calculate col maximum only once
+        for col in 0..SIDE - monster[0].len() {
+            for row in 0..SIDE - 3 {
+                if is_monster(&monster, &image, orientation, row, col) {
+                    monsters += 1;
+                    mark_monster(&monster, &mut part_of_monster, orientation, row, col);
+                }
+            }
+        }
+
+        let roughness = part_of_monster.data.iter().filter(|p| **p).count();
+        if monsters > 0 {
+            println!("Orient {:?} are {} monsters", orientation, monsters);
+            println!("Roughness {}", roughness);
+        }
+    }
 }
