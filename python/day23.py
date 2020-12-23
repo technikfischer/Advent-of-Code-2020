@@ -1,52 +1,67 @@
+from tqdm import tqdm
+
 if __name__ == '__main__':
     cups = list(map(int, '364289715'))
+    head = None
+    tail = None
+    nodes = [None] * (max(cups) + 1)
+    for c in cups:
+        node = [c, None]
 
-    pickup = cups[0]
-    for i in range(1, 100 + 1):
+        if not head:
+            head = node
+
+        if tail:
+            tail[1] = node
+        nodes[c] = node
+        tail = node
+
+    tail[1] = head
+
+    current = head
+    for i in tqdm(range(1, 10 + 1)):
         print("\nMove", i)
-        print('Cups', cups)
+        print('Cups ', end='')
+        c = current
+        for i in range(len(cups)):
+            print(c[0], end=' ')
+            c = c[1]
+        print()
 
-        pickup_index = cups.index(pickup)
-        print('Current cup', pickup)
+        c1 = current[1]
+        c2 = current[1][1]
+        c3 = current[1][1][1]
 
-        l = len(cups)
-        if pickup_index == l - 1:
-            c1, c2, c3 = cups[:3]
-            cups = cups[3:]
-        elif pickup_index == l - 2:
-            c2, c3 = cups[:2]
-            c1, = cups[-1:]
-            cups = cups[2:-1]
-        elif pickup_index == l - 3:
-            c1, c2 = cups[-2:]
-            c3, = cups[:1]
-            cups = cups[1:-2]
-        else:
-            c1, c2, c3 = cups[pickup_index + 1: pickup_index + 4]
-            del cups[pickup_index + 1: pickup_index + 4]
+        print('pick up', [c1[0], c2[0], c3[0]])
 
-        pickup_cups = [c1, c2, c3]
+        # cut out values
+        current[1] = c3[1]
 
-        print('pick up', pickup_cups)
+        # find insertion point
+        dest_label = current[0] - 1  # current cup label - 1
+        if dest_label == 0:
+            dest_label = max(cups)
 
-        destination_cup = pickup - 1  # current cup label - 1
-        if destination_cup == 0:
-            destination_cup = 9
+        while dest_label in (c1[0], c2[0], c3[0]):
+            dest_label -= 1
+            if dest_label == 0:
+                dest_label = max(cups)
 
-        while destination_cup in pickup_cups:
-            destination_cup -= 1
-            if destination_cup == 0:
-                destination_cup = 9
+        print('Destination', dest_label)
 
-        destination_cup_index = cups.index(destination_cup)
-        destination_cup_index += 1
-        print('Destination', destination_cup)
-        cups[destination_cup_index:destination_cup_index] = pickup_cups
+        destination_node = nodes[dest_label]
+        c3[1] = destination_node[1]  # successor of destination node becomes successor of c3
+        destination_node[1] = c1  # c1 becomes successor of destination node
 
-        pickup_index = cups.index(pickup)
-        pickup = cups[(pickup_index + 1) % len(cups)]
+        # next cup
+        current = current[1]
 
-    print("Final", cups)
     index_one = cups.index(1)
-    part1 = ''.join([str(cups[i % len(cups)]) for i in range(index_one + 1, index_one + len(cups))])
-    print("Answer to part 1 is", part1)
+
+    part1 = ''
+    c = nodes[1][1]
+    for i in range(len(cups) - 1):
+        part1 += str(c[0])
+        c = c[1]
+
+    assert part1 == '98645732'
