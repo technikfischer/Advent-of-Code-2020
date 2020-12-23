@@ -1,4 +1,16 @@
+from typing import List
+
 from tqdm import tqdm
+
+
+class LLNode:
+    next: 'LLNode'
+    val: int
+
+    def __init__(self, val):
+        self.next = None
+        self.val = val
+
 
 if __name__ == '__main__':
     cups = list(map(int, '364289715')) + list(range(10, 1_000_000 + 1))
@@ -6,48 +18,48 @@ if __name__ == '__main__':
 
     head = None
     tail = None
-    nodes = [None] * (max_cup + 1)
+    nodes: List[LLNode] = [None] * (max_cup + 1)
     for c in cups:
-        node = [c, None]
+        node = LLNode(c)
 
         if not head:
             head = node
 
         if tail:
-            tail[1] = node
+            tail.next = node
         nodes[c] = node
         tail = node
 
-    tail[1] = head
+    tail.next = head
 
-    current = head
+    current: LLNode = head
     for i in tqdm(range(10_000_000)):
-        c1 = current[1]
-        c2 = current[1][1]
-        c3 = current[1][1][1]
+        c1 = current.next
+        c2 = c1.next
+        c3 = c2.next
 
         # cut out values
-        current[1] = c3[1]
+        current.next = c3.next
 
         # find insertion point
-        dest_label = current[0] - 1  # current cup label - 1
+        dest_label = current.val - 1  # current cup label - 1
         if dest_label == 0:
             dest_label = max_cup
 
-        while dest_label in (c1[0], c2[0], c3[0]):
+        while dest_label in (c1.val, c2.val, c3.val):
             dest_label -= 1
             if dest_label == 0:
                 dest_label = max_cup
 
         destination_node = nodes[dest_label]
-        c3[1] = destination_node[1]  # successor of destination node becomes successor of c3
-        destination_node[1] = c1  # c1 becomes successor of destination node
+        c3.next = destination_node.next  # successor of destination node becomes successor of c3
+        destination_node.next = c1  # c1 becomes successor of destination node
 
         # next cup
-        current = current[1]
+        current = current.next
 
     index_one = cups.index(1)
 
-    star1 = nodes[1][1][0]
-    star2 = nodes[1][1][1][0]
+    star1 = nodes[1].next.val
+    star2 = nodes[1].next.next.val
     print(star1, star2, star1 * star2)
