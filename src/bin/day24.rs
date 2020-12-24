@@ -3,6 +3,10 @@ use crate::AxialDirection::*;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ops::Add;
+use std::hash::Hash;
+use std::iter::once;
+use std::slice::Iter;
+use itertools::__std_iter::Map;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 struct Coordinate {
@@ -16,6 +20,10 @@ impl Coordinate {
             q: 0,
             r: 0,
         }
+    }
+
+    fn adjacent(&self) -> Vec<Coordinate> {
+        AxialDirection::dirs().iter().map(|&d| *self + d).collect_vec()
     }
 }
 
@@ -50,6 +58,17 @@ impl AxialDirection {
             AxialDirection::SW => Coordinate { q: -1, r: 1 }
         }
     }
+
+    fn dirs() -> [Coordinate; 6] {
+        [
+            Coordinate { q: 0, r: -1 },
+            Coordinate { q: 1, r: -1 },
+            Coordinate { q: 1, r: 0 },
+            Coordinate { q: -1, r: 0 },
+            Coordinate { q: 0, r: 1 },
+            Coordinate { q: -1, r: 1 }
+        ]
+    }
 }
 
 fn parse_line(line: &str) -> Vec<AxialDirection> {
@@ -80,11 +99,16 @@ fn parse_line(line: &str) -> Vec<AxialDirection> {
             ['w', rest @ ..] => {
                 coords.push(W);
                 line = rest;
-            },
+            }
             _ => panic!("Invalid pattern")
         }
     }
     coords
+}
+
+
+fn count_adjacent_black(tiles: &HashMap<Coordinate, bool>, coord: &Coordinate) -> usize {
+    coord.adjacent().iter().map(|c| tiles.get(c).unwrap_or(&false)).filter(|v| **v).count()
 }
 
 fn main() {
@@ -100,5 +124,29 @@ fn main() {
     }
 
     let black_tiles = tiles.values().filter(|v| **v).count();
-    println!("Count of black tiles {}", black_tiles);
+    println!("Count of black tiles is {}", black_tiles);
+
+    // part 2
+    for i in 0..100 {
+        tiles = tiles.iter()
+            .flat_map(|(coord, bool)|
+                coord.adjacent().into_iter()
+                    .map(|c| (c, tiles.get(&c).unwrap_or(&false)))
+                    .chain(once((*coord, bool))))
+            .unique_by(|(k, _)| *k)
+            .map(|(coord, state)| {
+                let count = count_adjacent_black(&tiles, &coord);
+                let new_state = match state {
+                    true if count == 0 || count > 2 => false,
+                    false if count == 2 => true,
+                    state => *state
+                };
+                (coord, new_state)
+            })
+            .filter(|(c, v)| *v)
+            .collect()
+    }
+
+    let black_tiles = tiles.values().filter(|v| **v).count();
+    println!("Count of black tiles after 100 days (part2) is {}", black_tiles);
 }
